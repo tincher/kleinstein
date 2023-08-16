@@ -1,4 +1,5 @@
-from game.main import Game, Move, State
+from game_src import Game, Move
+from game_src.state import State
 
 
 def test_init_print():

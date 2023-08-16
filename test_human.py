@@ -52,6 +52,6 @@ def get_human_move(game):
 
 if __name__ == '__main__':
     argparse = ArgumentParser()
-    argparse.add_argument("--engine", type=str)
+    argparse.add_argument("--engine", type=str, default="random")
     args = argparse.parse_args()
     main(args.engine)

@@ -1,6 +1,5 @@
 from .state import State
 import numpy as np
-from tqdm import tqdm
 
 TOP = True
 BOT = False

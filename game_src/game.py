@@ -1,5 +1,6 @@
 from .state import State
 import numpy as np
+from tqdm import tqdm
 
 TOP = True
 BOT = False
@@ -11,6 +12,7 @@ class Game(object):
         self.top_state = State(TOP)
         self.bottom_state = State(BOT)
         self.top_turn = True
+        self.move_count = 0
 
     def get_valid_moves(self):
         active_state = self.top_state if self.top_turn else self.bottom_state
@@ -32,7 +34,11 @@ class Game(object):
             current_count = self.get_stone_count(move_field, active_state)
             initial_move = False
 
+            if self.get_game_result() is not None:
+                break
+
         self.top_turn = not self.top_turn
+        self.move_count += 1
 
     def execute_single_move(self, move_field, active_state, passive_state, initial_move=False):
         """Executes a single move, i.e. take x stones, fill x subsequent pits, returns field + x
@@ -79,6 +85,8 @@ class Game(object):
             return False
         elif self.bottom_state.is_lost():
             return True
+        elif self.move_count > 600:
+            return -1
         return None
 
     def __str__(self):

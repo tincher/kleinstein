@@ -1,4 +1,5 @@
 from .state import State
+import numpy as np
 
 TOP = True
 BOT = False
@@ -12,7 +13,8 @@ class Game(object):
         self.top_turn = True
 
     def get_valid_moves(self):
-        pass
+        active_state = self.top_state if self.top_turn else self.bottom_state
+        return np.where(active_state.state > 1)[0]
 
     def make_move(self, move):
         if move.top_turn != self.top_turn:

@@ -13,6 +13,8 @@ def main():
     move = Move(True, 10)
     game.make_move(move)
     print(game)
+    valid_moves = game.get_valid_moves()
+    print(valid_moves)
 
 
 if __name__ == "__main__":

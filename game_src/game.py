@@ -75,7 +75,11 @@ class Game(object):
         return current_count
 
     def get_game_result(self):
-        pass
+        if self.top_state.is_lost():
+            return False
+        elif self.bottom_state.is_lost():
+            return True
+        return None
 
     def __str__(self):
         result = []

@@ -15,6 +15,11 @@ class State(object):
         result.append(str(representation_state[order[1]]))
         return result
 
+    def is_lost(self):
+        front_row_empty = self.state[8:].sum() < 1
+        no_legal_moves = self.state.max() < 2
+        return front_row_empty or no_legal_moves
+
     def __getitem__(self, index):
         return self.state[index]
 

@@ -1,7 +1,6 @@
-[tool.flake8]
-max_line_length = 120
+[tool.autopep8]
+max-line-length = 120
 ignore = "E501,W6"  # or ["E501", "W6"]
-experimental = true
 
 [tool.pytest.ini_options]
 pythonpath = [ "." ]

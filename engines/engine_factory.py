@@ -1,5 +1,7 @@
 from .random_engine import RandomEngine
 from .count_engine import CountEngine
+from .steal_engine import StealEngine
+from .most_engine import MostEngine
 from .base_engine import BaseEngine
 
 

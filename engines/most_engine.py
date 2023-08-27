@@ -4,6 +4,13 @@ from game_src import Move
 
 
 class MostEngine(BaseEngine):
+    """Always take the field where most stones are in
+
+    Parameters
+    ----------
+    BaseEngine : _type_
+        _description_
+    """
 
     def __init__(self):
         pass

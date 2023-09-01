@@ -7,8 +7,5 @@ dependencies:
   - pytest
   - gymnasium
   - tqdm
-  - torchvision
-  - torchaudio
-  - pytorch::pytorch
   - scikit-optimize
 prefix: /Users/joelewig/miniconda3/envs/kleinstein

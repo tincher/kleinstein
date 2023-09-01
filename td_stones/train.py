@@ -9,18 +9,21 @@ import torch
 
 
 def main(game_count, discount, alpha, hidden_units):
-    model = TDStones(40, hidden_units)
+    model = TDStones(input_units=32, hidden_units=hidden_units)
     gradients = []
 
     final_predictions = [[], []]
 
-    for games_played in trange(game_count):
+    for games_played in trange(game_count, leave=False, position=1):
+        evaluations = []
+
         game = Game()
 
         while (game_result := game.get_game_result()) is None:
 
             with torch.no_grad():
-                best_move, best_game_representation, final_predictions[int(not game.top_turn)] = predict_best_move(game, model)
+                (best_move, best_game_representation,
+                 final_predictions[int(not game.top_turn)]) = predict_best_move(game, model)
 
             move = Move(game.top_turn, best_move)
             game.make_move(move)
@@ -40,9 +43,11 @@ def main(game_count, discount, alpha, hidden_units):
 
         if (games_played + 1) % 5 == 0:
             with torch.no_grad():
-                eval_model(100, model)
+                evaluations.append(eval_model(100, model))
 
                 torch.save(model.state_dict(), f"./models/{games_played}.pt")
+
+    return 1 - np.max(evaluations)
 
 
 def eval_model(game_count, top_model):
@@ -67,6 +72,7 @@ def eval_model(game_count, top_model):
     top_win_rate = game_results["eval_top"] / game_count
 
     tqdm.write(f"top win rate: {top_win_rate}")
+    return top_win_rate
 
 
 def get_engine_move(game, engine):
@@ -77,7 +83,8 @@ def learn(result, model, gradients, final_predictions, discount, alpha):
     discounted_gradients = [torch.zeros(grads.shape) for grads in gradients[0]]
     end_time_step = len(gradients)
     for time_step, time_step_gradients in enumerate(gradients):
-        discounted_gradients = [previous + gradient * discount**(end_time_step - (time_step // 2)) for gradient, previous in zip(time_step_gradients, discounted_gradients)]
+        discounted_gradients = [previous + gradient * discount**(end_time_step - (time_step // 2))
+                                for gradient, previous in zip(time_step_gradients, discounted_gradients)]
 
     # do the weight change
         final_reward_signal = torch.nn.functional.one_hot(torch.tensor(int(not result)), num_classes=2)
@@ -87,7 +94,7 @@ def learn(result, model, gradients, final_predictions, discount, alpha):
     state_dict = model.state_dict()
     for i, weight_key in enumerate(state_dict):
         direction = top if i % 2 == 0 else bottom
-        state_dict[weight_key] = state_dict[weight_key] + discounted_gradients[1][i] * direction
+        state_dict[weight_key] = state_dict[weight_key] + discounted_gradients[i] * direction
     model.load_state_dict(state_dict)
 
     return model
@@ -109,7 +116,8 @@ def predict_best_move(game, model):
         own_state = current_game.top_state if current_turn else current_game.bottom_state
         enemy_state = current_game.top_state if not current_turn else current_game.bottom_state
 
-        game_representation = torch.tensor(np.stack((own_state.state, enemy_state.state)), dtype=torch.float).reshape((-1))
+        game_representation = torch.tensor(np.stack((own_state.state, enemy_state.state)),
+                                           dtype=torch.float).reshape((-1))
         model_output = model(game_representation)
 
         if (own_win_probability := model_output[0]) > best_output:

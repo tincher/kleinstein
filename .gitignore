@@ -3,3 +3,4 @@
 **/.pytest_cache/
 models/
 **/.DS_Store
+**/**.pkl

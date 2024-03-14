@@ -3,6 +3,7 @@ from skopt.utils import use_named_args
 from skopt.space.space import Real, Integer
 from td_stones.train import main
 import skopt
+import scipy.optimize
 from argparse import ArgumentParser
 from tqdm import tqdm
 import torch

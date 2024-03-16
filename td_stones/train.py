@@ -157,4 +157,4 @@ if __name__ == '__main__':
     with mlflow.start_run():
         # Set a tag that we can use to remind ourselves what this run was for
         mlflow.set_tag("project", "kleinstein")
-        main(args.game_count, args.discount, args.alpha, args.hidden_units)
+        main(int(args.game_count), args.discount, args.alpha, int(args.hidden_units))

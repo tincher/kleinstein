@@ -56,10 +56,11 @@ def main(game_count, discount, alpha, hidden_units):
 
                 torch.save(model.state_dict(), f"./models/{games_played}.pt")
 
-    mlflow.sklearn.log_model(
-        sk_model=model,
+    mlflow.pytorch.log_model(
+        pytorch_model=model,
         artifact_path=f"tdstones_{games_played}",
         registered_model_name=f"trained_{games_played}",
+        input_example=Game().top_state
     )
     return 1 - np.max(evaluations)
 

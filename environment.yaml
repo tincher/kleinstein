@@ -1,0 +1,17 @@
+name: kleinstein
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - numpy
+  - pytest
+  - gymnasium
+  - tqdm
+  - torchvision
+  - torchaudio
+  - pytorch::pytorch
+  - scikit-optimize
+  - scipy
+  - optuna
+  - conda-forge::mlflow
+prefix: /Users/joelewig/miniconda3/envs/kleinstein

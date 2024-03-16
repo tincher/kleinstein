@@ -1,7 +1,7 @@
 from skopt import gp_minimize, callbacks
 from skopt.utils import use_named_args
 from skopt.space.space import Real, Integer
-from td_stones.train import main
+from td_stones.td_train import main
 import skopt
 import scipy.optimize
 from argparse import ArgumentParser
@@ -29,7 +29,7 @@ def optimize(iterations, game_count, checkpoint_path):
     previous_y0 = []
 
     res = scipy.optimize.minimize(optimization_function, bounds=space, callback=checkpoint_callback, x0=(0.5, 0.5, 256))
-    print(res.fun, print(res.x)) # default: 0.5 0.5 256 -> 0.5 0.5 256
+    print(res.fun, print(res.x))  # default: 0.5 0.5 256 -> 0.5 0.5 256
     skopt.dump(res, "./final.pkl", store_objective=False)
 
 

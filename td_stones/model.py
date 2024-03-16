@@ -7,6 +7,8 @@ class TDStones(nn.Module):
         self.linear_relu_stack = nn.Sequential(
             nn.Linear(input_units, hidden_units),
             nn.ReLU(),
+            nn.Linear(hidden_units, hidden_units),
+            nn.ReLU(),
             nn.Linear(hidden_units, 2),
             nn.Softmax(dim=0)
         )

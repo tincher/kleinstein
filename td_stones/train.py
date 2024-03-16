@@ -6,15 +6,22 @@ from game_src import Game, Move
 import numpy as np
 import copy
 import torch
+import mlflow
 
 
 def main(game_count, discount, alpha, hidden_units):
+    # Log the hyperparameters
+    mlflow.log_param("game_count", game_count, False)
+    mlflow.log_param("discount", discount, False)
+    mlflow.log_param("alpha", alpha, False)
+    mlflow.log_param("hidden_units", hidden_units, False)
+
     model = TDStones(input_units=32, hidden_units=hidden_units)
     gradients = []
 
     final_predictions = [[], []]
 
-    for games_played in trange(game_count, leave=False, position=1):
+    for games_played in trange(game_count, leave=True, position=0):
         evaluations = []
 
         game = Game()
@@ -41,12 +48,19 @@ def main(game_count, discount, alpha, hidden_units):
 
         model = learn(result, model, gradients, final_predictions, discount, alpha)
 
-        if (games_played + 1) % 5 == 0:
+        if (games_played + 1) % 10 == 0:
             with torch.no_grad():
-                evaluations.append(eval_model(100, model))
+                top_win_rate = eval_model(50, model)
+                evaluations.append(top_win_rate)
+                mlflow.log_metric("bot win rate", top_win_rate, games_played)
 
                 torch.save(model.state_dict(), f"./models/{games_played}.pt")
 
+    mlflow.sklearn.log_model(
+        sk_model=model,
+        artifact_path=f"tdstones_{games_played}",
+        registered_model_name=f"trained_{games_played}",
+    )
     return 1 - np.max(evaluations)
 
 
@@ -57,7 +71,7 @@ def eval_model(game_count, top_model):
 
     game_results = {"eval_top": 0, "eval_random": 0}
 
-    for _ in trange(game_count):
+    for _ in trange(game_count, position=1, leave=False):
         game = Game()
         while (game_result := game.get_game_result()) is None:
             current_engine = top_engine if game.top_turn else bottom_engine
@@ -130,9 +144,17 @@ def predict_best_move(game, model):
 
 if __name__ == '__main__':
     parser = ArgumentParser()
-    parser.add_argument("--discount", type=float, default=0.5)
-    parser.add_argument("--alpha", type=float, default=0.5)
-    parser.add_argument("--hidden_units", type=int, default=32)
+    parser.add_argument("--discount", type=float, default=0.8)
+    parser.add_argument("--alpha", type=float, default=0.1)  # can be seen as a learning rate
+    parser.add_argument("--hidden_units", type=int, default=100)
     parser.add_argument("--game_count", type=int, default=100)
     args, unknown = parser.parse_known_args()
-    main(args.game_count, args.discount, args.alpha, args.hidden_units)
+
+    mlflow.set_tracking_uri(uri="http://192.168.178.22:5000")
+    experiment_id = mlflow.set_experiment("[Kleinstein] TD training")
+    print(experiment_id)
+
+    with mlflow.start_run():
+        # Set a tag that we can use to remind ourselves what this run was for
+        mlflow.set_tag("project", "kleinstein")
+        main(args.game_count, args.discount, args.alpha, args.hidden_units)

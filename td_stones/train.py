@@ -56,8 +56,7 @@ def main(game_count, discount, alpha, hidden_units):
 
                 torch.save(model.state_dict(), f"./models/{games_played}.pt")
 
-    game_representation = torch.tensor(np.stack((Game().top_state.state, Game().bottom_state.state)),
-                                       dtype=torch.float).reshape((-1))
+    game_representation = np.stack((Game().top_state.state, Game().bottom_state.state)).reshape(-1)
     mlflow.pytorch.log_model(
         pytorch_model=model,
         artifact_path=f"tdstones_{games_played}",

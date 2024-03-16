@@ -151,7 +151,7 @@ if __name__ == '__main__':
     args, unknown = parser.parse_known_args()
 
     mlflow.set_tracking_uri(uri="http://192.168.178.22:5000")
-
+    mlflow.set_experiment("[Kleinstein] TD training")
     with mlflow.start_run():
         # Set a tag that we can use to remind ourselves what this run was for
         mlflow.set_tag("project", "kleinstein")

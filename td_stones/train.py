@@ -17,12 +17,11 @@ def main(game_count, discount, alpha, hidden_units):
     mlflow.log_param("hidden_units", hidden_units, False)
 
     model = TDStones(input_units=32, hidden_units=hidden_units)
-    gradients = []
-
     final_predictions = [[], []]
 
     for games_played in trange(game_count, leave=True, position=0):
         evaluations = []
+        gradients = []
 
         game = Game()
 
@@ -50,7 +49,7 @@ def main(game_count, discount, alpha, hidden_units):
 
         if (games_played + 1) % 10 == 0:
             with torch.no_grad():
-                top_win_rate = eval_model(50, model)
+                top_win_rate = eval_model(10, model)
                 evaluations.append(top_win_rate)
                 mlflow.log_metric("bot win rate", top_win_rate, games_played)
 
@@ -67,7 +66,7 @@ def main(game_count, discount, alpha, hidden_units):
 
 
 def eval_model(game_count, top_model):
-    bottom_engine = EngineFactory().get_engine("random")()
+    bottom_engine = EngineFactory().get_engine("count")()
     top_engine = EngineFactory().get_engine("td")()
     top_engine.model = top_model
 
@@ -87,7 +86,7 @@ def eval_model(game_count, top_model):
 
     top_win_rate = game_results["eval_top"] / game_count
 
-    tqdm.write(f"top win rate: {top_win_rate}")
+    tqdm.write(f"win rate: {top_win_rate}")
     return top_win_rate
 
 

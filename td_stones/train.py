@@ -49,9 +49,11 @@ def main(game_count, discount, alpha, hidden_units):
 
         if (games_played + 1) % 10 == 0:
             with torch.no_grad():
-                top_win_rate = eval_model(10, model)
-                evaluations.append(top_win_rate)
-                mlflow.log_metric("bot win rate", top_win_rate, games_played)
+                count_win_rate = eval_model(10, model, "count")
+                random_win_rate = eval_model(10, model, "random")
+                evaluations.append(count_win_rate)
+                mlflow.log_metric("vs count win rate", count_win_rate, games_played)
+                mlflow.log_metric("vs random win rate", random_win_rate, games_played)
 
                 torch.save(model.state_dict(), f"./models/{games_played}.pt")
 
@@ -65,8 +67,8 @@ def main(game_count, discount, alpha, hidden_units):
     return 1 - np.max(evaluations)
 
 
-def eval_model(game_count, top_model):
-    bottom_engine = EngineFactory().get_engine("count")()
+def eval_model(game_count, top_model, enemy_type):
+    bottom_engine = EngineFactory().get_engine(enemy_type)()
     top_engine = EngineFactory().get_engine("td")()
     top_engine.model = top_model
 

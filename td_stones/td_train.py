@@ -11,60 +11,103 @@ import mlflow
 
 def main(game_count, discount, alpha, hidden_units):
     # Log the hyperparameters
+    log_hyperparameters(game_count, discount, alpha, hidden_units)
+
+    model, games_played, evaluations = train_model(game_count, discount, alpha, hidden_units)
+
+    log_model(model, games_played)
+    return 1 - np.max(evaluations)
+
+
+def log_hyperparameters(game_count, discount, alpha, hidden_units):
     mlflow.log_param("game_count", game_count, False)
     mlflow.log_param("discount", discount, False)
     mlflow.log_param("alpha", alpha, False)
     mlflow.log_param("hidden_units", hidden_units, False)
 
+
+def train_model(game_count, discount, alpha, hidden_units):
     model = TDStones(input_units=32, hidden_units=hidden_units)
-    final_predictions = [[], []]
 
     for games_played in trange(game_count, leave=True, position=0):
         evaluations = []
-        gradients = []
+        previous_prediction = None
+        previous_second_term = [np.zeros(param.shape) for param in model.parameters()]
 
         game = Game()
 
         while (game_result := game.get_game_result()) is None:
-
             with torch.no_grad():
-                (best_move, best_game_representation,
-                 final_predictions[int(not game.top_turn)]) = predict_best_move(game, model)
+                # nächste prediction
+                (best_move, _, next_prediction) = predict_best_move(game, model)
 
             move = Move(game.top_turn, best_move)
             game.make_move(move)
 
+            if (result := game.get_game_result()) is not None:
+                next_prediction = int(not result)
+
+            current_turn = game.top_turn
+            own_state = game.top_state if current_turn else game.bottom_state
+            enemy_state = game.top_state if not current_turn else game.bottom_state
+
+            game_representation = torch.tensor(np.stack((own_state.state, enemy_state.state)),
+                                               dtype=torch.float).reshape((-1))
+
             # calculate and store the grads for the output
             model.zero_grad()
-            prediction = model(best_game_representation)
+            # aktuelle prediction
+            prediction = model(game_representation)
             # check if this is correct
             prediction.backward(prediction)
 
-            current_grads = [param.grad for param in model.parameters()]
-            gradients.append(current_grads)
+            # aktuelle gradients
+            current_gradients = [param.grad for param in model.parameters()]
+            if previous_prediction is not None:
+                # vorherige 2ter term
+                model, previous_second_term = td_learn(model, discount, alpha, current_gradients, previous_second_term,
+                                                       next_prediction, prediction.detach()[int(not current_turn)])
 
-        result = int(game_result)
-
-        model = learn(result, model, gradients, final_predictions, discount, alpha)
+            previous_prediction = prediction.detach()
 
         if (games_played + 1) % 10 == 0:
-            with torch.no_grad():
-                count_win_rate = eval_model(10, model, "count")
-                random_win_rate = eval_model(10, model, "random")
-                evaluations.append(count_win_rate)
-                mlflow.log_metric("vs count win rate", count_win_rate, games_played)
-                mlflow.log_metric("vs random win rate", random_win_rate, games_played)
+            log_model_performance(model, games_played, evaluations)
+    return model, games_played, evaluations
 
-                torch.save(model.state_dict(), f"./models/{games_played}.pt")
 
+def td_learn(model, discount, alpha, gradients, previous_second_term, next_prediction, prediction):
+    new_gradients = previous_second_term.copy()
+    for i in range(len(previous_second_term)):
+        new_gradients[i] = discount * (gradients[i] + discount * previous_second_term[i])
+    first_part = alpha * (next_prediction - prediction)
+    weight_change = [first_part * new_gradient for new_gradient in new_gradients]
+
+    state_dict = model.state_dict()
+    for i, weight_key in enumerate(state_dict):
+        state_dict[weight_key] = state_dict[weight_key] + weight_change[i]
+    model.load_state_dict(state_dict)
+    return model, weight_change
+
+
+def log_model_performance(model, games_played, evaluations):
+    with torch.no_grad():
+        count_win_rate = eval_model(10, model, "count")
+        random_win_rate = eval_model(10, model, "random")
+        evaluations.append(count_win_rate)
+        mlflow.log_metric("vs count win rate", count_win_rate, games_played)
+        mlflow.log_metric("vs random win rate", random_win_rate, games_played)
+
+        torch.save(model.state_dict(), f"./models/{games_played}.pt")
+
+
+def log_model(model, games_played):
     game_representation = np.stack((Game().top_state.state, Game().bottom_state.state)).reshape(-1)
-    mlflow.pytorch.log_model(
+    return mlflow.pytorch.log_model(
         pytorch_model=model,
         artifact_path=f"tdstones_{games_played}",
         registered_model_name=f"trained_{games_played}",
         input_example=game_representation
     )
-    return 1 - np.max(evaluations)
 
 
 def eval_model(game_count, top_model, enemy_type):
@@ -94,27 +137,6 @@ def eval_model(game_count, top_model, enemy_type):
 
 def get_engine_move(game, engine):
     return engine.find_move(game)
-
-
-def learn(result, model, gradients, final_predictions, discount, alpha):
-    discounted_gradients = [torch.zeros(grads.shape) for grads in gradients[0]]
-    end_time_step = len(gradients)
-    for time_step, time_step_gradients in enumerate(gradients):
-        discounted_gradients = [previous + gradient * discount**(end_time_step - (time_step // 2))
-                                for gradient, previous in zip(time_step_gradients, discounted_gradients)]
-
-    # do the weight change
-        final_reward_signal = torch.nn.functional.one_hot(torch.tensor(int(not result)), num_classes=2)
-    top = alpha * (final_reward_signal[0] - final_predictions[0])
-    bottom = alpha * (final_reward_signal[1] - final_predictions[1])
-
-    state_dict = model.state_dict()
-    for i, weight_key in enumerate(state_dict):
-        direction = top if i % 2 == 0 else bottom
-        state_dict[weight_key] = state_dict[weight_key] + discounted_gradients[i] * direction
-    model.load_state_dict(state_dict)
-
-    return model
 
 
 def predict_best_move(game, model):

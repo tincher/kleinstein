@@ -44,12 +44,12 @@ def train_model(game_count, discount, alpha, hidden_units):
             move = Move(game.top_turn, best_move)
             game.make_move(move)
 
-            if (result := game.get_game_result()) is not None:
-                next_prediction = int(not result)
-
             current_turn = game.top_turn
             own_state = game.top_state if current_turn else game.bottom_state
             enemy_state = game.top_state if not current_turn else game.bottom_state
+
+            if (result := game.get_game_result()) is not None:
+                next_prediction = torch.tensor(int(result == current_turn))
 
             game_representation = torch.tensor(np.stack((own_state.state, enemy_state.state)),
                                                dtype=torch.float).reshape((-1))
@@ -64,9 +64,9 @@ def train_model(game_count, discount, alpha, hidden_units):
             # aktuelle gradients
             current_gradients = [param.grad for param in model.parameters()]
             if previous_prediction is not None:
-                # vorherige 2ter term
+                prediction_difference = next_prediction - prediction.detach()[int(not current_turn)]
                 model, previous_second_term = td_learn(model, discount, alpha, current_gradients, previous_second_term,
-                                                       next_prediction - prediction.detach()[int(not current_turn)])
+                                                       prediction_difference)
 
             previous_prediction = prediction.detach()
 
@@ -176,7 +176,7 @@ if __name__ == '__main__':
     args, unknown = parser.parse_known_args()
 
     mlflow.set_tracking_uri(uri="http://192.168.178.22:5000")
-    mlflow.set_experiment("[Kleinstein] TD training")
+    mlflow.set_experiment("[Kleinstein] TD debug")
     with mlflow.start_run():
         # Set a tag that we can use to remind ourselves what this run was for
         mlflow.set_tag("project", "kleinstein")

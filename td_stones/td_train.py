@@ -66,7 +66,7 @@ def train_model(game_count, discount, alpha, hidden_units):
             if previous_prediction is not None:
                 # vorherige 2ter term
                 model, previous_second_term = td_learn(model, discount, alpha, current_gradients, previous_second_term,
-                                                       next_prediction, prediction.detach()[int(not current_turn)])
+                                                       next_prediction - prediction.detach()[int(not current_turn)])
 
             previous_prediction = prediction.detach()
 
@@ -75,11 +75,11 @@ def train_model(game_count, discount, alpha, hidden_units):
     return model, games_played, evaluations
 
 
-def td_learn(model, discount, alpha, gradients, previous_second_term, next_prediction, prediction):
+def td_learn(model, discount, alpha, gradients, previous_second_term, prediction_difference):
     new_gradients = previous_second_term.copy()
     for i in range(len(previous_second_term)):
         new_gradients[i] = discount * (gradients[i] + discount * previous_second_term[i])
-    first_part = alpha * (next_prediction - prediction)
+    first_part = alpha * prediction_difference
     weight_change = [first_part * new_gradient for new_gradient in new_gradients]
 
     state_dict = model.state_dict()

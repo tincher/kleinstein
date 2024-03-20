@@ -78,7 +78,7 @@ def train_model(game_count, discount, alpha, hidden_units):
 def td_learn(model, discount, alpha, gradients, previous_second_term, prediction_difference):
     new_gradients = previous_second_term.copy()
     for i in range(len(previous_second_term)):
-        new_gradients[i] = discount * (gradients[i] + discount * previous_second_term[i])
+        new_gradients[i] = gradients[i] + discount * previous_second_term[i]
     first_part = alpha * prediction_difference
     weight_change = [first_part * new_gradient for new_gradient in new_gradients]
 
@@ -86,7 +86,7 @@ def td_learn(model, discount, alpha, gradients, previous_second_term, prediction
     for i, weight_key in enumerate(state_dict):
         state_dict[weight_key] = state_dict[weight_key] + weight_change[i]
     model.load_state_dict(state_dict)
-    return model, weight_change
+    return model, new_gradients
 
 
 def log_model_performance(model, games_played, evaluations):

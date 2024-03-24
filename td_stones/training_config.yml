@@ -1,7 +1,6 @@
 logging:
   experiment_name: "[Kleinstein] TD training"
   tracking_url: "http://192.168.178.22:5000"
-  run_name: "learning rate optimizer"
 architecture:
   hidden_units: 100
 training:

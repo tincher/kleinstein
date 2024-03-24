@@ -49,6 +49,7 @@ def train_model(training_config):
         previous_prediction = None
         previous_second_term = [np.zeros(param.shape) for param in model.parameters()]
         learning_rate = learning_rate_manager.get_learning_rate()
+        mlflow.log_metric("learning rate", learning_rate, synchronous=False)
 
         game = Game()
 

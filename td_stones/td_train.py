@@ -193,7 +193,7 @@ if __name__ == '__main__':
 
     mlflow.set_tracking_uri(uri=config["logging"]["tracking_url"])
     mlflow.set_experiment(config["logging"]["experiment_name"])
-    with mlflow.start_run():
+    with mlflow.start_run(config["logging"]["run_name"]):
         # Set a tag that we can use to remind ourselves what this run was for
         mlflow.set_tag("project", "kleinstein")
         main(config)

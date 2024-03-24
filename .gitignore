@@ -4,3 +4,4 @@
 models/
 **/.DS_Store
 **/**.pkl
+**/training_config.yml

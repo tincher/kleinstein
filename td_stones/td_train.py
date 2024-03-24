@@ -49,7 +49,7 @@ def train_model(game_count, discount, alpha, hidden_units):
             enemy_state = game.top_state if not current_turn else game.bottom_state
 
             if (result := game.get_game_result()) is not None:
-                next_prediction = torch.tensor(int(result == current_turn))
+                next_prediction = torch.tensor(int(result))
 
             game_representation = torch.tensor(np.stack((own_state.state, enemy_state.state)),
                                                dtype=torch.float).reshape((-1))
@@ -59,12 +59,12 @@ def train_model(game_count, discount, alpha, hidden_units):
             # aktuelle prediction
             prediction = model(game_representation)
             # check if this is correct
-            prediction.backward(prediction)
+            prediction.backward()
 
             # aktuelle gradients
             current_gradients = [param.grad for param in model.parameters()]
             if previous_prediction is not None:
-                prediction_difference = next_prediction - prediction.detach()[int(not current_turn)]
+                prediction_difference = next_prediction - prediction.detach()
                 model, previous_second_term = td_learn(model, discount, alpha, current_gradients, previous_second_term,
                                                        prediction_difference)
 
@@ -76,17 +76,17 @@ def train_model(game_count, discount, alpha, hidden_units):
 
 
 def td_learn(model, discount, alpha, gradients, previous_second_term, prediction_difference):
-    new_gradients = previous_second_term.copy()
+    second_term = previous_second_term.copy()
     for i in range(len(previous_second_term)):
-        new_gradients[i] = gradients[i] + discount * previous_second_term[i]
+        second_term[i] = gradients[i] + discount * previous_second_term[i]
     first_part = alpha * prediction_difference
-    weight_change = [first_part * new_gradient for new_gradient in new_gradients]
+    weight_change = [first_part * new_gradient for new_gradient in second_term]
 
-    state_dict = model.state_dict()
+    state_dict = model.state_dict().copy()
     for i, weight_key in enumerate(state_dict):
         state_dict[weight_key] = state_dict[weight_key] + weight_change[i]
     model.load_state_dict(state_dict)
-    return model, new_gradients
+    return model, second_term
 
 
 def log_model_performance(model, games_played, evaluations):

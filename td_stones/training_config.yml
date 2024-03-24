@@ -11,4 +11,4 @@ training:
     initial: 0.1
     schedule_learning_rate: True
     learning_rate_divisor: 10
-    schedule_learning_rate_steps: 2
+    schedule_learning_rate_steps: 10000

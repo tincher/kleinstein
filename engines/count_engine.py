@@ -1,6 +1,8 @@
-from .base_engine import BaseEngine
 import copy
+
 from game_src import Move
+
+from .base_engine import BaseEngine
 
 
 class CountEngine(BaseEngine):

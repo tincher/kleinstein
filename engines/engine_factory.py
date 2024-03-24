@@ -1,9 +1,9 @@
-from .random_engine import RandomEngine
-from .count_engine import CountEngine
-from .steal_engine import StealEngine
-from .most_engine import MostEngine
-from .td_engine import TDEngine
 from .base_engine import BaseEngine
+from .count_engine import CountEngine
+from .most_engine import MostEngine
+from .random_engine import RandomEngine
+from .steal_engine import StealEngine
+from .td_engine import TDEngine
 
 
 class EngineFactory():

@@ -1,0 +1,13 @@
+logging:
+  experiment_name: "[Kleinstein] TD debug"
+  tracking_url: "http://192.168.178.22:5000"
+architecture:
+  hidden_units: 100
+training:
+  discount: 0.8
+  epochs: 100
+  learning_rate: 
+    initial: 0.1
+    schedule_learning_rate: True
+    learning_rate_divisor: 10
+    schedule_learning_rate_steps: 2

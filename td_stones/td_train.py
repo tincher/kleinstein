@@ -1,44 +1,60 @@
+import copy
 from argparse import ArgumentParser
-from td_stones.model import TDStones
-from tqdm import trange, tqdm
+
+import mlflow
+import numpy as np
+import torch
+import yaml
+from tqdm import tqdm, trange
+
 from engines import EngineFactory
 from game_src import Game, Move
-import numpy as np
-import copy
-import torch
-import mlflow
+from td_stones.model import TDStones
 
 
-def main(game_count, discount, alpha, hidden_units):
-    # Log the hyperparameters
-    log_hyperparameters(game_count, discount, alpha, hidden_units)
+class LearningRateManager():
+    def __init__(self, learning_rate_config):
+        self.learning_rate = learning_rate_config["initial"]
+        self.schedule_learning_rate = learning_rate_config["schedule_learning_rate"]
+        self.learning_rate_divisor = learning_rate_config["learning_rate_divisor"]
+        self.schedule_learning_rate_steps = learning_rate_config["schedule_learning_rate_steps"]
 
-    model, games_played, evaluations = train_model(game_count, discount, alpha, hidden_units)
+        self.steps_done = 0
+
+    def get_learning_rate(self):
+        if not self.schedule_learning_rate:
+            return self.learning_rate
+        self.steps_done += 1
+        if self.steps_done >= self.schedule_learning_rate_steps:
+            self.steps_done = 0
+            self.learning_rate = self.learning_rate / self.learning_rate_divisor
+        return self.learning_rate
+
+
+def main(training_config):
+    mlflow.log_params(training_config, False)
+
+    model, games_played, evaluations = train_model(training_config)
 
     log_model(model, games_played)
     return 1 - np.max(evaluations)
 
 
-def log_hyperparameters(game_count, discount, alpha, hidden_units):
-    mlflow.log_param("game_count", game_count, False)
-    mlflow.log_param("discount", discount, False)
-    mlflow.log_param("alpha", alpha, False)
-    mlflow.log_param("hidden_units", hidden_units, False)
+def train_model(training_config):
+    model = TDStones(input_units=32, hidden_units=training_config["architecture"]["hidden_units"])
+    learning_rate_manager = LearningRateManager(training_config["training"]["learning_rate"])
 
-
-def train_model(game_count, discount, alpha, hidden_units):
-    model = TDStones(input_units=32, hidden_units=hidden_units)
-
-    for games_played in trange(game_count, leave=True, position=0):
+    for games_played in trange(training_config["training"]["epochs"], leave=True, position=0):
         evaluations = []
         previous_prediction = None
         previous_second_term = [np.zeros(param.shape) for param in model.parameters()]
+        learning_rate = learning_rate_manager.get_learning_rate()
 
         game = Game()
 
-        while (game_result := game.get_game_result()) is None:
+        while game.get_game_result() is None:
             with torch.no_grad():
-                # nächste prediction
+                # next prediction
                 (best_move, _, next_prediction) = predict_best_move(game, model)
 
             move = Move(game.top_turn, best_move)
@@ -56,17 +72,17 @@ def train_model(game_count, discount, alpha, hidden_units):
 
             # calculate and store the grads for the output
             model.zero_grad()
-            # aktuelle prediction
+            # current prediction
             prediction = model(game_representation)
             # check if this is correct
             prediction.backward()
 
-            # aktuelle gradients
+            # current gradients
             current_gradients = [param.grad for param in model.parameters()]
             if previous_prediction is not None:
                 prediction_difference = next_prediction - prediction.detach()
-                model, previous_second_term = td_learn(model, discount, alpha, current_gradients, previous_second_term,
-                                                       prediction_difference)
+                model, previous_second_term = td_learn(model, training_config["training"]["discount"], learning_rate,
+                                                       current_gradients, previous_second_term, prediction_difference)
 
             previous_prediction = prediction.detach()
 
@@ -75,11 +91,11 @@ def train_model(game_count, discount, alpha, hidden_units):
     return model, games_played, evaluations
 
 
-def td_learn(model, discount, alpha, gradients, previous_second_term, prediction_difference):
+def td_learn(model, discount, learning_rate, gradients, previous_second_term, prediction_difference):
     second_term = previous_second_term.copy()
     for i in range(len(previous_second_term)):
         second_term[i] = gradients[i] + discount * previous_second_term[i]
-    first_part = alpha * prediction_difference
+    first_part = learning_rate * prediction_difference
     weight_change = [first_part * new_gradient for new_gradient in second_term]
 
     state_dict = model.state_dict().copy()
@@ -121,7 +137,7 @@ def eval_model(game_count, top_model, enemy_type):
         game = Game()
         while (game_result := game.get_game_result()) is None:
             current_engine = top_engine if game.top_turn else bottom_engine
-            move = Move(game.top_turn, get_engine_move(game, current_engine))
+            move = Move(game.top_turn, current_engine.find_move(game))
             game.make_move(move)
 
         if game_result:
@@ -133,10 +149,6 @@ def eval_model(game_count, top_model, enemy_type):
 
     tqdm.write(f"win rate: {top_win_rate}")
     return top_win_rate
-
-
-def get_engine_move(game, engine):
-    return engine.find_move(game)
 
 
 def predict_best_move(game, model):
@@ -167,17 +179,21 @@ def predict_best_move(game, model):
     return valid_moves[best_output_index], best_game_representation, best_output
 
 
+def read_training_config(training_config_path):
+    with open(training_config_path, 'r') as file:
+        return yaml.safe_load(file)
+
+
 if __name__ == '__main__':
     parser = ArgumentParser()
-    parser.add_argument("--discount", type=float, default=0.8)
-    parser.add_argument("--alpha", type=float, default=0.1)  # can be seen as a learning rate
-    parser.add_argument("--hidden_units", type=int, default=100)
-    parser.add_argument("--game_count", type=int, default=100)
+    parser.add_argument("--training_config", type=str)
     args, unknown = parser.parse_known_args()
 
-    mlflow.set_tracking_uri(uri="http://192.168.178.22:5000")
-    mlflow.set_experiment("[Kleinstein] TD debug")
+    config = read_training_config(args.training_config)
+
+    mlflow.set_tracking_uri(uri=config["logging"]["tracking_url"])
+    mlflow.set_experiment(config["logging"]["experiment_name"])
     with mlflow.start_run():
         # Set a tag that we can use to remind ourselves what this run was for
         mlflow.set_tag("project", "kleinstein")
-        main(int(args.game_count), args.discount, args.alpha, int(args.hidden_units))
+        main(config)

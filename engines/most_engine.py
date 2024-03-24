@@ -1,6 +1,8 @@
 import numpy as np
-from .base_engine import BaseEngine
+
 from game_src import Move
+
+from .base_engine import BaseEngine
 
 
 class MostEngine(BaseEngine):

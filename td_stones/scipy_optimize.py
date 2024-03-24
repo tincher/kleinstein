@@ -1,12 +1,14 @@
-from skopt import gp_minimize, callbacks
-from skopt.utils import use_named_args
-from skopt.space.space import Real, Integer
-from td_stones.td_train import main
-import skopt
-import scipy.optimize
 from argparse import ArgumentParser
-from tqdm import tqdm
+
+import scipy.optimize
+import skopt
 import torch
+from skopt import callbacks, gp_minimize
+from skopt.space.space import Integer, Real
+from skopt.utils import use_named_args
+from tqdm import tqdm
+
+from td_stones.td_train import main
 
 
 def optimize(iterations, game_count, checkpoint_path):

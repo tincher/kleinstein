@@ -1,9 +1,12 @@
-import numpy as np
-from .base_engine import BaseEngine
-from td_stones.model import TDStones
-from game_src import Move
-import torch
 import copy
+
+import numpy as np
+import torch
+
+from game_src import Move
+from td_stones.model import TDStones
+
+from .base_engine import BaseEngine
 
 
 class TDEngine(BaseEngine):

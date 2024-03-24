@@ -1,6 +1,7 @@
+from argparse import ArgumentParser
+
 from engines import EngineFactory
 from game_src import Game, Move
-from argparse import ArgumentParser
 
 
 def main(engine_name):

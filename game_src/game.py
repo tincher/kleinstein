@@ -1,5 +1,6 @@
-from .state import State
 import numpy as np
+
+from .state import State
 
 TOP = True
 BOT = False

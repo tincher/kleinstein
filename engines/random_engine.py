@@ -1,5 +1,6 @@
-from .base_engine import BaseEngine
 import random
+
+from .base_engine import BaseEngine
 
 
 class RandomEngine(BaseEngine):

@@ -1,7 +1,9 @@
+from argparse import ArgumentParser
+
+from tqdm import trange
+
 from engines import EngineFactory
 from game_src import Game, Move
-from argparse import ArgumentParser
-from tqdm import trange
 
 
 def main(top_engine_name, bottom_engine_name, game_count):

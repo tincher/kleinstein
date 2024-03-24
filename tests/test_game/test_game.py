@@ -1,6 +1,6 @@
 import numpy as np
+
 from game_src import Game, Move
-from game_src.state import State
 
 
 def test_init_print():

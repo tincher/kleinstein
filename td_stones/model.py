@@ -9,8 +9,8 @@ class TDStones(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_units, hidden_units, bias=False),
             nn.ReLU(),
-            nn.Linear(hidden_units, 2, bias=False),
-            nn.Softmax(dim=0)
+            nn.Linear(hidden_units, 1, bias=False),
+            nn.Sigmoid()
         )
 
     def forward(self, x):

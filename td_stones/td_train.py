@@ -69,8 +69,8 @@ def train_model(training_config):
                                                        current_gradients, previous_second_term, prediction_difference)
 
             previous_prediction = prediction.detach()
-
-            mlflow.log_metric(f"prediction_{games_played}", total_difference, synchronous=False, step=steps)
+            if training_config["logging"]["verbose"]:
+                mlflow.log_metric(f"prediction_{games_played}", total_difference, synchronous=False, step=steps)
             steps += 1
 
         env.reset()

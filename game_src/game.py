@@ -26,13 +26,13 @@ class Game(object):
             active_state, passive_state = passive_state, active_state
 
         move_field = move.field
-        initial_move = True
-        current_count = self.get_stone_count(move_field, active_state, initial_move)
+        player_move = True
+        current_count = self.get_stone_count(move_field, active_state, player_move)
 
         while current_count > 1:
-            move_field = self.execute_single_move(move_field, active_state, passive_state, initial_move=initial_move)
+            move_field = self.execute_single_move(move_field, active_state, passive_state, player_move=player_move)
             current_count = self.get_stone_count(move_field, active_state)
-            initial_move = False
+            player_move = False
 
             if self.get_game_result() is not None:
                 break
@@ -40,7 +40,7 @@ class Game(object):
         self.top_turn = not self.top_turn
         self.move_count += 1
 
-    def execute_single_move(self, move_field, active_state, passive_state, initial_move=False):
+    def execute_single_move(self, move_field, active_state, passive_state, player_move=False):
         """Executes a single move, i.e. take x stones, fill x subsequent pits, returns field + x
 
         Parameters
@@ -59,7 +59,7 @@ class Game(object):
         """
         own_stone_count = active_state[move_field]
         enemy_stone_count = 0
-        if move_field > 7 and not initial_move:
+        if move_field > 7 and not player_move:
             opposing_field_index = (15 - (move_field - 8)) % 16
             enemy_stone_count = passive_state[opposing_field_index]
             passive_state[opposing_field_index] = 0
@@ -72,8 +72,8 @@ class Game(object):
             active_state[:last_field + 1] += 1
         return last_field
 
-    def get_stone_count(self, move, active_state, initial_move=False):
-        if (current_count := active_state[move]) < 2 and initial_move:
+    def get_stone_count(self, move, active_state, player_move=False):
+        if (current_count := active_state[move]) < 2 and player_move:
             raise ValueError(f"Invalid Move: There are not enough stones in the pit!"
                              f"pit: {move}, entry: {active_state[move]}",
                              str(self))
@@ -82,11 +82,11 @@ class Game(object):
 
     def get_game_result(self):
         if self.top_state.is_lost():
-            return False
-        elif self.bottom_state.is_lost():
-            return True
-        elif self.move_count > 600:
             return -1
+        elif self.bottom_state.is_lost():
+            return 1
+        elif self.move_count > 600:
+            return 0
         return None
 
     def __str__(self):

@@ -7,8 +7,8 @@ class TDStones(nn.Module):
         self.linear_relu_stack = nn.Sequential(
             nn.Linear(input_units, hidden_units, bias=False),
             nn.ReLU(),
-            nn.Linear(hidden_units, hidden_units, bias=False),
-            nn.ReLU(),
+            # nn.Linear(hidden_units, hidden_units, bias=False),
+            # nn.ReLU(),
             nn.Linear(hidden_units, 1, bias=False),
             nn.Sigmoid()
         )

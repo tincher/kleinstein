@@ -36,10 +36,8 @@ def predict_best_move(game, model):
 
         current_game.make_move(Move(current_turn, move))
 
-        own_state = current_game.top_state if current_turn else current_game.bottom_state
-        enemy_state = current_game.top_state if not current_turn else current_game.bottom_state
-
-        game_representation = torch.tensor(np.stack((own_state.state, enemy_state.state)), dtype=torch.float).reshape((-1))
+        game_representation = torch.tensor(np.stack((current_game.top_state.state, current_game.bottom_state.state)),
+                                           dtype=torch.float).reshape((-1))
         model_output = model(game_representation)
 
         if (own_win_probability := model_output[0]) > best_output:

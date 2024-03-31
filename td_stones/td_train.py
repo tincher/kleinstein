@@ -1,4 +1,4 @@
-import copy
+import random
 from argparse import ArgumentParser
 
 import mlflow
@@ -8,27 +8,12 @@ import yaml
 from tqdm import tqdm, trange
 
 from engines import EngineFactory
-from game_src import Game, Move
+from engines.td_engine import predict_best_move
+from game_src.game import Game
+from game_src.game_environment import GemStoneEnv
+from game_src.move import Move
+from td_stones.learning_rate_manager import LearningRateManager
 from td_stones.model import TDStones
-
-
-class LearningRateManager():
-    def __init__(self, learning_rate_config):
-        self.learning_rate = learning_rate_config["initial"]
-        self.schedule_learning_rate = learning_rate_config["schedule_learning_rate"]
-        self.learning_rate_divisor = learning_rate_config["learning_rate_divisor"]
-        self.schedule_learning_rate_steps = learning_rate_config["schedule_learning_rate_steps"]
-
-        self.steps_done = 0
-
-    def get_learning_rate(self):
-        if not self.schedule_learning_rate:
-            return self.learning_rate
-        self.steps_done += 1
-        if self.steps_done >= self.schedule_learning_rate_steps:
-            self.steps_done = 0
-            self.learning_rate = self.learning_rate / self.learning_rate_divisor
-        return self.learning_rate
 
 
 def main(training_config):
@@ -44,6 +29,8 @@ def train_model(training_config):
     model = TDStones(input_units=32, hidden_units=training_config["architecture"]["hidden_units"])
     learning_rate_manager = LearningRateManager(training_config["training"]["learning_rate"])
 
+    env = GemStoneEnv()
+
     for games_played in trange(training_config["training"]["epochs"], leave=True, position=0):
         evaluations = []
         previous_prediction = None
@@ -51,42 +38,45 @@ def train_model(training_config):
         learning_rate = learning_rate_manager.get_learning_rate()
         mlflow.log_metric("learning rate", learning_rate, synchronous=False)
 
-        game = Game()
+        total_difference = 0
+        total_abs_difference = 0
+        steps = 0
 
-        while game.get_game_result() is None:
+        while not env.terminated:
             with torch.no_grad():
                 # next prediction
-                (best_move, _, next_prediction) = predict_best_move(game, model)
-
-            move = Move(game.top_turn, best_move)
-            game.make_move(move)
-
-            current_turn = game.top_turn
-            own_state = game.top_state if current_turn else game.bottom_state
-            enemy_state = game.top_state if not current_turn else game.bottom_state
-
-            if (result := game.get_game_result()) is not None:
-                next_prediction = torch.tensor(int(result))
-
-            game_representation = torch.tensor(np.stack((own_state.state, enemy_state.state)),
-                                               dtype=torch.float).reshape((-1))
+                (best_move, _, next_prediction) = predict_best_move(env.game, model)
 
             # calculate and store the grads for the output
             model.zero_grad()
             # current prediction
-            prediction = model(game_representation)
+            prediction = model(torch.tensor(env.observation, dtype=torch.float))
             # check if this is correct
             prediction.backward()
+
+            _, reward, _, _, _ = env.step(best_move)
+            if reward:
+                next_prediction = torch.tensor(reward)
 
             # current gradients
             current_gradients = [param.grad for param in model.parameters()]
             if previous_prediction is not None:
                 prediction_difference = next_prediction - prediction.detach()
+                total_difference += prediction_difference
+                total_abs_difference += abs(prediction_difference)
+
                 model, previous_second_term = td_learn(model, training_config["training"]["discount"], learning_rate,
                                                        current_gradients, previous_second_term, prediction_difference)
 
             previous_prediction = prediction.detach()
 
+            mlflow.log_metric(f"prediction_{games_played}", total_difference, synchronous=False, step=steps)
+            steps += 1
+
+        env.reset()
+
+        mlflow.log_metric("total difference", total_difference, synchronous=False, step=games_played)
+        mlflow.log_metric("total abs difference", total_abs_difference, synchronous=False, step=games_played)
         if (games_played + 1) % 10 == 0:
             log_model_performance(model, games_played, evaluations)
     return model, games_played, evaluations
@@ -133,18 +123,19 @@ def eval_model(game_count, top_model, enemy_type):
     top_engine.model = top_model
 
     game_results = {"eval_top": 0, "eval_random": 0}
+    env = GemStoneEnv()
 
     for _ in trange(game_count, position=1, leave=False):
-        game = Game()
-        while (game_result := game.get_game_result()) is None:
-            current_engine = top_engine if game.top_turn else bottom_engine
-            move = Move(game.top_turn, current_engine.find_move(game))
-            game.make_move(move)
+        while not env.terminated:
+            current_engine = top_engine if env.game.top_turn else bottom_engine
+            env.step(current_engine.find_move(env.game))
 
-        if game_result:
+        if env.reward > 0:
             game_results["eval_top"] += 1
         else:
             game_results["eval_random"] += 1
+
+        env.reset()
 
     top_win_rate = game_results["eval_top"] / game_count
 
@@ -152,37 +143,15 @@ def eval_model(game_count, top_model, enemy_type):
     return top_win_rate
 
 
-def predict_best_move(game, model):
-    valid_moves = game.get_valid_moves()
-
-    best_output, best_output_index, best_game_representation = -1, -1, None
-
-    current_turn = game.top_turn
-
-    for move_index, move in enumerate(valid_moves):
-
-        current_game = copy.deepcopy(game)
-
-        current_game.make_move(Move(current_turn, move))
-
-        own_state = current_game.top_state if current_turn else current_game.bottom_state
-        enemy_state = current_game.top_state if not current_turn else current_game.bottom_state
-
-        game_representation = torch.tensor(np.stack((own_state.state, enemy_state.state)),
-                                           dtype=torch.float).reshape((-1))
-        model_output = model(game_representation)
-
-        if (own_win_probability := model_output[0]) > best_output:
-            best_output = own_win_probability
-            best_output_index = move_index
-            best_game_representation = game_representation
-
-    return valid_moves[best_output_index], best_game_representation, best_output
-
-
 def read_training_config(training_config_path):
     with open(training_config_path, 'r') as file:
         return yaml.safe_load(file)
+
+
+def set_random_seeds(random_seed):
+    torch.manual_seed(random_seed)
+    np.random.seed(random_seed)
+    random.seed(random_seed)
 
 
 if __name__ == '__main__':
@@ -191,6 +160,9 @@ if __name__ == '__main__':
     args, unknown = parser.parse_known_args()
 
     config = read_training_config(args.training_config)
+    if config["random_seed"] is None:
+        config["random_seed"] = random.random()
+    set_random_seeds(config["random_seed"])
 
     mlflow.set_tracking_uri(uri=config["logging"]["tracking_url"])
     mlflow.set_experiment(config["logging"]["experiment_name"])

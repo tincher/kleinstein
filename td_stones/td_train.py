@@ -74,9 +74,9 @@ def train_model(training_config):
             steps += 1
 
         env.reset()
-
-        mlflow.log_metric("total difference", total_difference, synchronous=False, step=games_played)
-        mlflow.log_metric("total abs difference", total_abs_difference, synchronous=False, step=games_played)
+        if training_config["logging"]["verbose"]:
+            mlflow.log_metric("total difference", total_difference, synchronous=False, step=games_played)
+            mlflow.log_metric("total abs difference", total_abs_difference, synchronous=False, step=games_played)
         if (games_played + 1) % 10 == 0:
             log_model_performance(model, games_played, evaluations)
     return model, games_played, evaluations

@@ -1,6 +1,7 @@
 logging:
   experiment_name: "[Kleinstein] TD debug"
   tracking_url: "http://192.168.178.22:5000"
+  verbose: False
 random_seed: 100000
 architecture:
   hidden_units: 2

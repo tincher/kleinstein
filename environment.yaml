@@ -14,4 +14,7 @@ dependencies:
   - scipy
   - optuna
   - conda-forge::mlflow
+  - ipykernel
+  - conda-forge::ruff
+  - pre-commit
 prefix: /Users/joelewig/miniconda3/envs/kleinstein

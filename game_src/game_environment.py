@@ -1,18 +1,16 @@
-from typing import Any, SupportsFloat
+from typing import Any, ClassVar, SupportsFloat
 
 import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
 
-from .game import Game
-from .move import Move
+from . import Game, Move
 
 
 class GemStoneEnv(gym.Env):
-    metadata = {"render_modes": ["ansi"], "render_fps": 1}
+    metadata: ClassVar[dict] = {"render_modes": ["ansi"], "render_fps": 1}
 
-    def __init__(self, render_mode=None):
-
+    def __init__(self, render_mode: str | None = None) -> None:
         self.observation_space = spaces.MultiDiscrete([32 * 2] * 32)
         self.terminated = False
 
@@ -22,16 +20,16 @@ class GemStoneEnv(gym.Env):
         self.action_space = MoveSpace(Game())
 
     @property
-    def game(self):
+    def game(self) -> Game:
         return self.action_space.game
 
     @game.setter
-    def game(self, game):
+    def game(self, game: Game) -> None:
         self.action_space.game = game
 
     @property
     def observation(self) -> np.ndarray:
-        return np.stack((self.game.top_state.state, self.game.bottom_state.state)).reshape((-1))
+        return np.stack((self.game.top_state.state, self.game.bottom_state.state)).reshape(-1)
 
     @property
     def reward(self) -> int:
@@ -44,23 +42,26 @@ class GemStoneEnv(gym.Env):
         return reward
 
     def step(self, action: np.ndarray) -> tuple[Any, SupportsFloat, bool, bool, dict[str, Any]]:
-        assert action in (valid_moves := self.game.get_valid_moves())
+        valid_moves = self.game.get_valid_moves()
+        assert action in valid_moves
 
         move = Move(self.game.top_turn, action)
         self.game.make_move(move)
-        info = {'turn': self.game.top_turn, 'valid': valid_moves}
+        info = {"turn": self.game.top_turn, "valid": valid_moves}
 
         return self.observation, self.reward, self.terminated, False, info
 
-    def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None) -> tuple[Any, dict[str, Any]]:
+    def reset(self, **_: dict[str, Any]) -> tuple[Any, dict[str, Any]]:
         self.game = Game()
         self.terminated = False
         return self.observation, {}
 
 
 class MoveSpace(spaces.Space):
-    def __init__(self, game):
+    game: Game
+
+    def __init__(self, game: Game) -> None:
         self.game = game
 
-    def sample(self):
-        return np.random.choice(self.game.get_valid_moves())
+    def sample(self) -> Move:
+        return np.random.default_rng().choice(self.game.get_valid_moves())

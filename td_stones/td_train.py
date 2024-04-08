@@ -1,5 +1,6 @@
 import random
 from argparse import ArgumentParser
+from pathlib import Path
 
 import mlflow
 import numpy as np
@@ -8,16 +9,15 @@ import yaml
 from tqdm import tqdm, trange
 
 from engines import EngineFactory
-from engines.td_engine import predict_best_move
+from engines.td_engine import TDEngine
 from game_src.game import Game
 from game_src.game_environment import GemStoneEnv
-from game_src.move import Move
 from td_stones.learning_rate_manager import LearningRateManager
 from td_stones.model import TDStones
 
 
-def main(training_config):
-    mlflow.log_params(training_config, False)
+def main(training_config: dict) -> float:
+    mlflow.log_params(training_config, synchronous=False)
 
     model, games_played, evaluations = train_model(training_config)
 
@@ -25,7 +25,7 @@ def main(training_config):
     return 1 - np.max(evaluations)
 
 
-def train_model(training_config):
+def train_model(training_config: dict) -> tuple[TDStones, int, list[float]]:
     model = TDStones(input_units=32, hidden_units=training_config["architecture"]["hidden_units"])
     learning_rate_manager = LearningRateManager(training_config["training"]["learning_rate"])
 
@@ -45,7 +45,7 @@ def train_model(training_config):
         while not env.terminated:
             with torch.no_grad():
                 # next prediction
-                (best_move, _, next_prediction) = predict_best_move(env.game, model)
+                (best_move, next_prediction) = TDEngine.predict_best_move(env.game, model)
 
             # calculate and store the grads for the output
             model.zero_grad()
@@ -65,8 +65,14 @@ def train_model(training_config):
                 total_difference += prediction_difference
                 total_abs_difference += abs(prediction_difference)
 
-                model, previous_second_term = td_learn(model, training_config["training"]["discount"], learning_rate,
-                                                       current_gradients, previous_second_term, prediction_difference)
+                model, previous_second_term = td_learn(
+                    model,
+                    training_config["training"]["discount"],
+                    learning_rate,
+                    current_gradients,
+                    previous_second_term,
+                    prediction_difference,
+                )
 
             previous_prediction = prediction.detach()
             if training_config["logging"]["verbose"]:
@@ -82,7 +88,14 @@ def train_model(training_config):
     return model, games_played, evaluations
 
 
-def td_learn(model, discount, learning_rate, gradients, previous_second_term, prediction_difference):
+def td_learn(
+    model: TDStones,
+    discount: float,
+    learning_rate: float,
+    gradients: list[torch.Tensor],
+    previous_second_term: list[torch.Tensor],
+    prediction_difference: float,
+) -> tuple[TDStones, list[torch.Tensor]]:
     second_term = previous_second_term.copy()
     for i in range(len(previous_second_term)):
         second_term[i] = gradients[i] + discount * previous_second_term[i]
@@ -96,7 +109,7 @@ def td_learn(model, discount, learning_rate, gradients, previous_second_term, pr
     return model, second_term
 
 
-def log_model_performance(model, games_played, evaluations):
+def log_model_performance(model: TDStones, games_played: int, evaluations: list[float]) -> None:
     with torch.no_grad():
         count_win_rate = eval_model(10, model, "count")
         random_win_rate = eval_model(10, model, "random")
@@ -107,17 +120,17 @@ def log_model_performance(model, games_played, evaluations):
         torch.save(model.state_dict(), f"./models/{games_played}.pt")
 
 
-def log_model(model, games_played):
+def log_model(model: TDStones, games_played: int) -> None:
     game_representation = np.stack((Game().top_state.state, Game().bottom_state.state)).reshape(-1)
     return mlflow.pytorch.log_model(
         pytorch_model=model,
         artifact_path=f"tdstones_{games_played}",
         registered_model_name=f"trained_{games_played}",
-        input_example=game_representation
+        input_example=game_representation,
     )
 
 
-def eval_model(game_count, top_model, enemy_type):
+def eval_model(game_count: int, top_model: TDStones, enemy_type: str) -> float:
     bottom_engine = EngineFactory().get_engine(enemy_type)()
     top_engine = EngineFactory().get_engine("td")()
     top_engine.model = top_model
@@ -143,30 +156,29 @@ def eval_model(game_count, top_model, enemy_type):
     return top_win_rate
 
 
-def read_training_config(training_config_path):
-    with open(training_config_path, 'r') as file:
+def read_training_config(training_config_path: str) -> dict:
+    with Path(training_config_path).open() as file:
         return yaml.safe_load(file)
 
 
-def set_random_seeds(random_seed):
+def set_random_seeds(random_seed: int) -> None:
     torch.manual_seed(random_seed)
-    np.random.seed(random_seed)
+    np.random.seed(random_seed)  # noqa: NPY002 needs to be set this just in case a library uses it
     random.seed(random_seed)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--training_config", type=str)
     args, unknown = parser.parse_known_args()
 
     config = read_training_config(args.training_config)
     if config["random_seed"] is None:
-        config["random_seed"] = random.random()
+        config["random_seed"] = np.random.default_rng().random()
     set_random_seeds(config["random_seed"])
 
     mlflow.set_tracking_uri(uri=config["logging"]["tracking_url"])
     mlflow.set_experiment(config["logging"]["experiment_name"])
     with mlflow.start_run():
-        # Set a tag that we can use to remind ourselves what this run was for
         mlflow.set_tag("project", "kleinstein")
         main(config)

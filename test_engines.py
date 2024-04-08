@@ -4,9 +4,10 @@ from tqdm import trange
 
 from engines import EngineFactory
 from game_src import Game, Move
+from test_human import get_engine_move
 
 
-def main(top_engine_name, bottom_engine_name, game_count):
+def main(top_engine_name: str, bottom_engine_name: str, game_count: int) -> None:
     top_engine = EngineFactory().get_engine(top_engine_name)()
     bottom_engine = EngineFactory().get_engine(bottom_engine_name)()
 
@@ -32,11 +33,7 @@ def main(top_engine_name, bottom_engine_name, game_count):
     print(f"bottom {bottom_engine_name} win rate: {bottom_win_rate}")
 
 
-def get_engine_move(game, engine):
-    return engine.find_move(game)
-
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     argparse = ArgumentParser()
     argparse.add_argument("--top_engine", type=str)
     argparse.add_argument("--bottom_engine", type=str)

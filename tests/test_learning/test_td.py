@@ -2,7 +2,7 @@ from td_stones.model import TDStones
 from td_stones.td_train import td_learn
 
 
-def test_td_learn():
+def test_td_learn() -> None:
     # arrange
     model = TDStones(1)
     gradients = []

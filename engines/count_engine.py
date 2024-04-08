@@ -1,16 +1,29 @@
 import copy
 
-from game_src import Move
+from game_src import Game, Move
 
 from .base_engine import BaseEngine
 
 
 class CountEngine(BaseEngine):
+    """Engine to always use the move that results in the most stones on current side to move."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
-    def find_move(self, game):
+    def find_move(self, game: Game) -> int:
+        """Find the move that results in the most stones on the side which has to move.
+
+        Parameters
+        ----------
+        game : Game
+            game for which to find the move
+
+        Returns
+        -------
+        int
+            the move index which results in the most stones on the current side to move
+        """
         # get all valid moves
         valid_moves = game.get_valid_moves()
 
@@ -22,7 +35,6 @@ class CountEngine(BaseEngine):
 
         # for all moves
         for index, move in enumerate(valid_moves):
-
             # take copy of game
             current_game = copy.deepcopy(game)
 
@@ -37,7 +49,6 @@ class CountEngine(BaseEngine):
 
             # if the current move increases the stone count more than the previously tested moves, store it
             if stone_count > max_stone_count:
-
                 # store stone count
                 max_stone_count = stone_count
 

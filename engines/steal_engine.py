@@ -1,16 +1,29 @@
 import copy
 
-from game_src import Move
+from game_src import Game, Move
 
 from .base_engine import BaseEngine
 
 
 class StealEngine(BaseEngine):
+    """Engine with the goal of the enemy having the least stones."""
 
-    def __init__(self):
-        pass
+    def __init__(self) -> None:
+        """Initialize the StealEngine."""
 
-    def find_move(self, game):
+    def find_move(self, game: Game) -> int:
+        """Find the move that results in the least stones on the non-moving side.
+
+        Parameters
+        ----------
+        game : Game
+            game for which to find the move
+
+        Returns
+        -------
+        int
+            the move index which results in the least stones on the current side not to move
+        """
         # get all valid moves
         valid_moves = game.get_valid_moves()
 
@@ -22,7 +35,6 @@ class StealEngine(BaseEngine):
 
         # for all moves
         for index, move in enumerate(valid_moves):
-
             # take copy of game
             current_game = copy.deepcopy(game)
 
@@ -37,7 +49,6 @@ class StealEngine(BaseEngine):
 
             # if the current move decreses the enemy's stone count more than the previously tested moves, store it
             if stone_count < min_stone_count:
-
                 # store stone count
                 min_stone_count = stone_count
 

@@ -6,3 +6,4 @@ models/
 **/**.pkl
 **/training_config.yml
 **/tmp.**
+.ruff_cache

@@ -1,23 +1,29 @@
 import numpy as np
 
-from game_src import Move
+from game_src import Game
 
 from .base_engine import BaseEngine
 
 
 class MostEngine(BaseEngine):
-    """Always take the field where most stones are in
+    """Always take the field which contains the most stones."""
 
-    Parameters
-    ----------
-    BaseEngine : _type_
-        _description_
-    """
-
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
-    def find_move(self, game):
+    def find_move(self, game: Game) -> int:
+        """Find move which uses the most stones in the first pit.
+
+        Parameters
+        ----------
+        game : Game
+            the game for which to find the move
+
+        Returns
+        -------
+        int
+            the index of the pit with the most stones in it
+        """
         # get all valid moves
         valid_moves = game.get_valid_moves()
 

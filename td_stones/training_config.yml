@@ -8,7 +8,7 @@ architecture:
 training:
   discount: 0.8
   epochs: 1000
-  learning_rate: 
+  learning_rate:
     initial: 0.2
     schedule_learning_rate: True
     learning_rate_divisor: 10

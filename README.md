@@ -9,10 +9,10 @@ Contents
 
 1. **game_src**
     The core implementation of the Gem Stone game, where players compete to collect gem stones and outmaneuver each other strategically.
-  
+
 2. **test_human/test_engines**
     Script to play the Gem Stone game against the implemented algorithms. You can pit yourself against the computer or watch different algorithms play against each other.
-  
+
 3. **engines**
     Various algorithms implemented to play the Gem Stone game. These algorithms range from basic strategies to advanced reinforcement learning techniques.
 

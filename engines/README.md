@@ -8,7 +8,7 @@ Overview
 
 1. **Basic Algorithmic Engines:**
 These engines are powered by traditional algorithms designed to play the Gem Stone game. They offer a range of strategies, from simple heuristic-based approaches to more complex decision-making algorithms.
-  
+
 2. **Reinforcement Learning (RL) Powered Engines:**
 These engines utilize reinforcement learning techniques, including temporal difference learning, to play the Gem Stone game. They learn from experience, gradually improving their performance through interaction with the game environment.
 

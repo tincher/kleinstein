@@ -29,11 +29,11 @@ class Game:
 
         move_field = move.field
         player_move = True
-        current_count = self.get_stone_count(move_field, active_state, player_move)
+        current_count = self.get_stone_count(move_field, active_state, player_move=player_move)
 
         while current_count > 1:
             move_field = self.execute_single_move(move_field, active_state, passive_state, player_move=player_move)
-            current_count = self.get_stone_count(move_field, active_state)
+            current_count = self.get_stone_count(move_field, active_state, player_move=player_move)
             player_move = False
 
             if self.get_game_result() is not None:

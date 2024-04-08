@@ -49,7 +49,7 @@ def test_get_valid_moves_no_valid_moves() -> None:
     game.top_state.state = np.ones(16)
     game_result = game.get_game_result()
 
-    assert not game_result
+    assert game_result == -1
 
 
 def test_get_valid_moves_empty_front() -> None:

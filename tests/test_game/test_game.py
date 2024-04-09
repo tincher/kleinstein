@@ -1,6 +1,7 @@
 import numpy as np
 
-from game_src import Game, Move
+from game_src.game import Game
+from game_src.move import Move
 
 
 def test_init_print() -> None:

@@ -4,7 +4,8 @@ import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
 
-from . import Game, Move
+from game_src.game import Game
+from game_src.move import Move
 
 
 class GemStoneEnv(gym.Env):
@@ -18,6 +19,7 @@ class GemStoneEnv(gym.Env):
         self.render_mode = render_mode
 
         self.action_space = MoveSpace(Game())
+        self.steps = 0
 
     @property
     def game(self) -> Game:
@@ -47,8 +49,9 @@ class GemStoneEnv(gym.Env):
 
         move = Move(self.game.top_turn, action)
         self.game.make_move(move)
-        info = {"turn": self.game.top_turn, "valid": valid_moves}
+        self.steps += 1
 
+        info = {"turn": self.game.top_turn, "valid": valid_moves, "steps": self.steps}
         return self.observation, self.reward, self.terminated, False, info
 
     def reset(self, **_: dict[str, Any]) -> tuple[Any, dict[str, Any]]:

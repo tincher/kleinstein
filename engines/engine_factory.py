@@ -1,4 +1,9 @@
 from .base_engine import BaseEngine
+from .count_engine import CountEngine  # noqa: F401 these need to be imported so the __subclasses__ call can work
+from .most_engine import MostEngine  # noqa: F401
+from .random_engine import RandomEngine  # noqa: F401
+from .steal_engine import StealEngine  # noqa: F401
+from .td_engine import TDEngine  # noqa: F401
 
 
 class EngineFactory:

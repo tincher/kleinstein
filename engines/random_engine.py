@@ -1,6 +1,6 @@
 import random
 
-from game_src import Game
+from game_src.game import Game
 
 from .base_engine import BaseEngine
 

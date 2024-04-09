@@ -3,7 +3,8 @@ import copy
 import numpy as np
 import torch
 
-from game_src import Game, Move
+from game_src.game import Game
+from game_src.move import Move
 from td_stones.model import TDStones
 
 from .base_engine import BaseEngine

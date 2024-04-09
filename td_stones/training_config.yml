@@ -4,7 +4,12 @@ logging:
   verbose: False
 random_seed: 100000
 architecture:
-  hidden_units: 2
+  hidden_units: 100
+evaluation:
+  games: 10
+  enemies:
+    - count
+    - random
 training:
   discount: 0.8
   epochs: 1000

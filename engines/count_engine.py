@@ -1,6 +1,7 @@
 import copy
 
-from game_src import Game, Move
+from game_src.game import Game
+from game_src.move import Move
 
 from .base_engine import BaseEngine
 

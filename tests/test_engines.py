@@ -4,7 +4,8 @@ from test_human import get_engine_move
 from tqdm import trange
 
 from engines import EngineFactory
-from game_src import Game, Move
+from game_src.game import Game
+from game_src.move import Move
 
 
 def main(top_engine_name: str, bottom_engine_name: str, game_count: int) -> None:

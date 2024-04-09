@@ -2,7 +2,8 @@ from argparse import ArgumentParser
 
 from engines import EngineFactory
 from engines.base_engine import BaseEngine
-from game_src import Game, Move
+from game_src.game import Game
+from game_src.move import Move
 
 
 def main(engine_name: str) -> None:
